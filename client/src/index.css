@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* ═══ 全局设计 token（步骤 2 · 方案 A 手机沉浸感）═══
+   改这里 = 改全身。所有页面只引用 token，不写死色值 */
+@theme {
+  /* 文字 */
+  --color-ink: #ece7e2;        /* 主文字：暖白，长时间阅读不刺眼 */
+  --color-ink-dim: #9c948e;    /* 次要文字：时间戳、状态 */
+
+  /* 背景层次 */
+  --color-night: #141114;      /* 手机外的环境色：深夜 */
+  --color-paper: #1e1a1c;      /* 手机屏幕底色：暖黑 */
+  --color-card: #2a2426;       /* 卡片 / 对方气泡 */
+
+  /* 品牌色 */
+  --color-mine: #b4536a;       /* 我的气泡：玫瑰（陪伴感但不腻） */
+  --color-accent: #e8869d;     /* 点缀：在线状态、按钮 hover */
+
+  /* 形状 */
+  --radius-bubble: 1.25rem;    /* 气泡圆角 */
+}

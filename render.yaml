@@ -1,0 +1,14 @@
+# Render 一键部署蓝图：https://dashboard.render.com → New → Blueprint → 选中本仓库
+services:
+  - type: web
+    name: ai-phone-v2
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix client && npm run build --prefix client && npm install --prefix server
+    startCommand: node server/src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: DEEPSEEK_API_KEY
+        sync: false   # 部署时在 Render 控制台手动填，不进代码库

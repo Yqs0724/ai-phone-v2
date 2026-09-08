@@ -1,0 +1,17 @@
+{
+  "name": "AI 小手机",
+  "short_name": "小手机",
+  "description": "记得你、会主动、聊不腻的 AI 陪伴应用",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141114",
+  "theme_color": "#141114",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
