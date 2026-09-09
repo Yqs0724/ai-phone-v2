@@ -19,3 +19,25 @@
   /* 形状 */
   --radius-bubble: 1.25rem;    /* 气泡圆角 */
 }
+
+/* ═══ 滚动条：系统默认的灰白条在深色手机上太出戏 ═══
+   改成 4px 细条 + 半透明拇指，平时隐形，滚动时才隐约可见 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(236 231 226 / 0.15);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(236 231 226 / 0.3);
+}
+/* Firefox 用另一套属性，一并覆盖 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(236 231 226 / 0.15) transparent;
+}

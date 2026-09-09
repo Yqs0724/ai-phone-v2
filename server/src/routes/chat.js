@@ -43,15 +43,43 @@ router.post('/messages', async (req, res, next) => {
 // 记忆查看（调试用：TA 到底记住了什么）
 router.get('/memories', (_req, res) => res.json(listMemories()))
 
-// 人设 / 世界书读写
+// 消息编辑 / 撤回：直接改库，AI 读的历史就是改后的版本（等于悄悄改写了 TA 的记忆）
+router.put('/messages/:id', (req, res) => {
+  const content = req.body?.content?.trim()
+  if (!content) return res.status(400).json({ error: '消息不能为空' })
+  db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(content, req.params.id)
+  res.json({ ok: true })
+})
+
+router.delete('/messages/:id', (req, res) => {
+  db.prepare('DELETE FROM messages WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+// 记忆修改 / 删除：记错了可以人工纠正，不想被记住的可以忘掉
+router.put('/memories/:id', (req, res) => {
+  const fact = req.body?.fact?.trim()
+  if (!fact) return res.status(400).json({ error: '记忆内容不能为空' })
+  db.prepare('UPDATE memories SET fact = ? WHERE id = ?').run(fact, req.params.id)
+  res.json({ ok: true })
+})
+
+router.delete('/memories/:id', (req, res) => {
+  db.prepare('DELETE FROM memories WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+// 档案读写：人设 / 世界书 / 双方名字 / 双方头像（头像为 base64，体积小直接进 settings 表）
+const SETTING_KEYS = ['persona', 'worldbook', 'char_name', 'user_name', 'char_avatar', 'user_avatar']
+
 router.get('/settings', (_req, res) => {
   const get = (k) => db.prepare('SELECT value FROM settings WHERE key = ?').get(k)?.value ?? ''
-  res.json({ persona: get('persona'), worldbook: get('worldbook') })
+  res.json(Object.fromEntries(SETTING_KEYS.map((k) => [k, get(k)])))
 })
 
 router.put('/settings', (req, res) => {
   const up = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
-  for (const key of ['persona', 'worldbook']) {
+  for (const key of SETTING_KEYS) {
     if (typeof req.body?.[key] === 'string') up.run(key, req.body[key])
   }
   res.json({ ok: true })
