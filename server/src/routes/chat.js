@@ -56,6 +56,29 @@ router.delete('/messages/:id', (req, res) => {
   res.json({ ok: true })
 })
 
+// 重说：对某条消息不满意，剪掉这之后的剧情分支，让 TA 基于上文重新回应
+// assistant 消息 → 连这条回复一起删；user 消息 → 保留这句，删掉其后所有（含旧回复）
+router.post('/messages/:id/regenerate', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id)
+    const msg = db.prepare('SELECT id, role FROM messages WHERE id = ?').get(id)
+    if (!msg) return res.status(404).json({ error: '消息不存在' })
+    db.prepare(`DELETE FROM messages WHERE id ${msg.role === 'assistant' ? '>=' : '>'} ?`).run(id)
+
+    const reply = await chat(buildMessages())
+    const info = db
+      .prepare('INSERT INTO messages (role, content, created_at) VALUES (?, ?, ?)')
+      .run('assistant', reply, Date.now())
+    res.json({ id: info.lastInsertRowid, role: 'assistant', content: reply })
+
+    // 和正常发消息一样，异步提炼记忆 + 检测剧情姿态
+    extractAndStore().catch((e) => console.error('记忆提炼失败：', e.message))
+    detectAndStoreTone().catch((e) => console.error('姿态检测失败：', e.message))
+  } catch (err) {
+    next(err)
+  }
+})
+
 // 记忆修改 / 删除：记错了可以人工纠正，不想被记住的可以忘掉
 router.put('/memories/:id', (req, res) => {
   const fact = req.body?.fact?.trim()

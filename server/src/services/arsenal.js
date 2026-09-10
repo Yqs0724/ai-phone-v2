@@ -2,6 +2,7 @@
 import { db } from '../db.js'
 import { chat } from './llm.js'
 import { getMemoriesForInjection } from './memory.js'
+import { DEFAULT_PERSONA } from './prompt.js'
 
 const TYPES = ['剧情点子', '角色卡', 'prompt技巧']
 const STAGES = ['开篇', '续命', '收尾']
@@ -42,11 +43,13 @@ ${rawText.slice(0, 2000)}`,
   }
 }
 
-// ── 给梗：人设 + 命中素材 + 记忆去重 + 反同质化约束 → 3 个可粘贴的桥段 ──
+// ── 给梗：人设 + 双方姓名 + 命中素材 + 记忆去重 + 反同质化约束 → 3 个可粘贴的桥段 ──
 export async function generatePlots() {
-  const persona =
-    db.prepare("SELECT value FROM settings WHERE key = 'persona'").get()?.value ||
-    '顾衍：27 岁投行副总裁，表面毒舌挑剔，实则心细，好意总用嫌弃包装'
+  // 和聊天用同一个数据源（settings 表 + 同一个默认人设），档案一改这里跟着变
+  const get = (k) => db.prepare('SELECT value FROM settings WHERE key = ?').get(k)?.value
+  const persona = get('persona') || DEFAULT_PERSONA
+  const charName = get('char_name') || '顾衍'
+  const userName = get('user_name') || '我'
 
   // 选材：优先"续命"阶段素材，其余按入库时间倒序，共取 6 条
   const all = db.prepare('SELECT * FROM materials').all()
@@ -62,6 +65,10 @@ export async function generatePlots() {
 【当前人设】
 ${persona}
 
+【双方姓名，桥段里指代必须用这两个名字】
+TA 的名字：${charName}
+用户的名字：${userName}（开场白以用户视角写，涉及用户时用这个名字）
+
 【素材库：可借鉴的梗】
 ${ranked.length ? ranked.map((m, i) => `${i + 1}.（${m.type}）${m.raw_text.slice(0, 300)}`).join('\n') : '（素材库为空，自由发挥，但仍须遵守下方反同质化要求）'}
 
@@ -73,6 +80,7 @@ ${memories.length ? memories.map((f) => `- ${f}`).join('\n') : '（无）'}
 2. 每个桥段必须利用人设里的独有设定，换一个普通恋人就讲不通
 3. 每个桥段必须制造新冲突或信息差（秘密、误会、意外、立场对立、 deadline），让剧情有前进的动力
 4. 素材只是灵感来源，要改写成人设风格，不许照抄
+5. 素材或记忆里出现的其他名字一律视为旧数据，禁止使用；称呼只能用【双方姓名】里的两个名字
 
 输出 JSON：{"plots":[{"title":"桥段名","setup":"2-3 句剧情说明","opener":"用户可直接粘贴发给角色的开场白（以用户视角写，含动作）","whyFit":"一句话：为什么这个梗专属于这个人设"}]}
 恰好 3 个桥段。`

@@ -155,6 +155,33 @@ export default function App() {
     setActiveMsgId(null)
   }
 
+  // ── 重说：剪掉这条之后的剧情分支，让 TA 重新回应 ──
+  const [regenerating, setRegenerating] = useState(false)
+
+  async function regenerateMsg(id: number) {
+    if (regenerating || sending) return
+    setActiveMsgId(null)
+    // 重说会连累之后的剧情一起消失，先算清楚会被剪掉几条，提示里明说（危险操作给明确后果）
+    const idx = messages.findIndex((m) => m.id === id)
+    const after = messages.slice(idx + 1)
+    // user 消息重说时，紧跟着的旧回复是被替换而不是损失，不算进提示
+    const extra = messages[idx]?.role === 'user' && after[0]?.role === 'assistant' ? after.slice(1) : after
+    if (extra.length > 0 && !confirm(`重说会同时剪掉这条之后的 ${extra.length} 条剧情，重新生成。确定重说？`)) return
+    setRegenerating(true)
+    setError('')
+    try {
+      const r = await fetch(`/api/messages/${id}/regenerate`, { method: 'POST' })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || '重说失败')
+      // 重新拉全量：被剪掉的分支和新回复都以数据库为准
+      setMessages(await fetch('/api/messages').then((r) => r.json()))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '网络异常，请稍后重试')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   // ── 记忆修改 / 删除 ──
   async function saveMemEdit(id: number) {
     const fact = editingMemText.trim()
@@ -292,17 +319,18 @@ export default function App() {
                       >
                         编辑
                       </button>
+                      <button className="hover:text-accent" onClick={() => regenerateMsg(m.id!)}>重说</button>
                       <button className="hover:text-red-400" onClick={() => recallMsg(m.id!)}>撤回</button>
                     </div>
                   )}
                 </div>
               ))}
-              {sending && (
+              {sending || regenerating ? (
                 <div className="flex items-end gap-2 justify-start">
                   <Avatar src={charAvatar} size="w-8 h-8" />
                   <div className="bg-card text-ink-dim rounded-bubble rounded-bl-md px-4 py-2.5 text-sm">正在输入…</div>
                 </div>
-              )}
+              ) : null}
               <div ref={bottomRef} />
             </main>
 
